@@ -1,0 +1,35 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Rate {
+  id        Int      @id @default(autoincrement())
+  rate      Float
+  createdAt DateTime @default(now())
+}
+
+model Email {
+  id         Int       @id @default(autoincrement())
+  email      String    @unique
+  subscribed Boolean
+  createdAt  DateTime  @default(now())
+  deletedAt  DateTime?
+}
+
+model Metrics {
+  id                 Int      @id @default(autoincrement())
+  email_subscribed   Int
+  email_unsubscribed Int
+  email_sent         Int
+  email_error        Int
+  exchange_rate      Int
+  createdAt          DateTime @default(now())
+}

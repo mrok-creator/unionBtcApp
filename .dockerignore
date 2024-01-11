@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+.dockerignore
+
+# Ignore version control files
+.git
+.gitignore
+**/.git
+**/.gitignore
+
+# Ignore editor-specific files
+.idea
+

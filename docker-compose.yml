@@ -1,0 +1,58 @@
+version: "3.8"
+services:
+  service-app:
+    build:
+      context: .
+      dockerfile: apps/service-app/Dockerfile
+    command: npm run start:servise:dev
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - REQUEST_ID_HEADER=${REQUEST_ID_HEADER}
+      - POSTGRES_HOST="database"
+    depends_on:
+      - database
+    networks:
+      - my-network
+    env_file:
+      - ./apps/service-app/.env
+    volumes:
+        - .:/usr/src/app
+        - /usr/src/app/node_modules
+
+
+  worker-app:
+    build:
+      context: .
+      dockerfile: ./apps/worker-app/Dockerfile
+    ports:
+      - "8090:8090"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - REQUEST_ID_HEADER=${REQUEST_ID_HEADER}
+    depends_on:
+      - database
+    networks:
+      - my-network
+    env_file:
+      - ./apps/service-app/.env
+
+  database:
+    image: postgres:latest
+    ports:
+      - "${DB_PORT:-5432}:${DB_PORT:-5432}"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    networks:
+     - my-network
+    env_file:
+      - .env
+
+networks:
+  my-network:
+    driver: bridge

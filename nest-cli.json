@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/worker-app/src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "apps/worker-app/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/btc-currency",
+  "projects": {
+    "service-app": {
+      "type": "application",
+      "root": "apps/service-app",
+      "entryFile": "main",
+      "sourceRoot": "apps/service-app/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/service-app/tsconfig.app.json"
+      }
+    },
+    "worker-app": {
+      "type": "application",
+      "root": "apps/worker-app",
+      "entryFile": "main",
+      "sourceRoot": "apps/worker-app/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/worker-app/tsconfig.app.json"
+      }
+    }
+  }
+}
