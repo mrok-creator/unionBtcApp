@@ -3,8 +3,9 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaClient, Email } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { MetricService } from '../metric/metric.service';
+import { Email } from '../../shared/model/email';
 
 @Injectable()
 export class SubscriptionService {
@@ -18,34 +19,67 @@ export class SubscriptionService {
   }
 
   async subscribeEmail(email: string): Promise<Email> {
-    const existingEmail = await this.prisma.email.upsert({
+    const existingEmail = await this.prisma.email.findUnique({
       where: { email },
-      create: { email, subscribed: true },
-      update: { subscribed: true },
     });
 
-    if (existingEmail.subscribed) {
-      throw new ConflictException('E-mail already exists and is subscribed');
+    if (existingEmail) {
+      this.validateSubscriptionStatus(existingEmail, true);
+
+      const updatedEmail = await this.updateEmailSubscriptionStatus(
+        email,
+        true,
+      );
+      this.metricsService.incrementEmailSubscribedCounter();
+      return updatedEmail;
+    } else {
+      const newEmail = await this.createEmail({ email, subscribed: true });
+      this.metricsService.incrementEmailSubscribedCounter();
+      return newEmail;
     }
-
-    this.metricsService.incrementEmailSubscribedCounter();
-
-    return existingEmail;
   }
 
   async unsubscribeEmail(email: string): Promise<Email> {
-    const existingEmail = await this.prisma.email.upsert({
+    const existingEmail = await this.prisma.email.findUnique({
       where: { email },
-      create: { email, subscribed: false },
-      update: { subscribed: false },
     });
 
-    if (!existingEmail.subscribed) {
+    if (!existingEmail) {
       throw new NotFoundException('E-mail not found');
     }
 
-    this.metricsService.incrementEmailUnsubscribedCounter();
+    this.validateSubscriptionStatus(existingEmail, false);
 
-    return existingEmail;
+    const updatedEmail = await this.updateEmailSubscriptionStatus(email, false);
+    this.metricsService.incrementEmailUnsubscribedCounter();
+    return updatedEmail;
+  }
+
+  private validateSubscriptionStatus(
+    email: Email,
+    expectedStatus: boolean,
+  ): void {
+    if (email.subscribed === expectedStatus) {
+      throw new ConflictException(
+        `E-mail is already ${expectedStatus ? 'subscribed' : 'unsubscribed'}`,
+      );
+    }
+  }
+
+  private async updateEmailSubscriptionStatus(
+    email: string,
+    subscribed: boolean,
+  ): Promise<Email> {
+    return this.prisma.email.update({
+      where: { email },
+      data: { subscribed },
+    });
+  }
+
+  private async createEmail(data: {
+    email: string;
+    subscribed: boolean;
+  }): Promise<Email> {
+    return this.prisma.email.create({ data });
   }
 }

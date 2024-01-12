@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import axios from 'axios';
 import { Counter, Gauge, register } from 'prom-client';
+import { Metrics } from '../../shared/interface/metrics';
 
 @Injectable()
 export class MetricService {
@@ -59,16 +60,30 @@ export class MetricService {
   setRateGaugeValue(value: number): void {
     this.rateGauge.set(value);
   }
-
-  // Method to retrieve all Prometheus metrics
-  async getPrometheusMetrics(): Promise<string> {
-    await this.savePrometheusMetrics();
-    return register.metrics();
+  async getPrometheusMetrics(): Promise<Metrics> {
+    const counters = await register.metrics();
+    const metrics = await this.parsePrometheusString(counters);
+    await this.savePrometheusMetrics(metrics);
+    return metrics;
   }
 
-  // Method to send collected metrics to Prometheus
-  async savePrometheusMetrics(): Promise<void> {
-    const metrics = register.metrics();
-    await axios.post('http://localhost:8090/metrics/', metrics);
+  async savePrometheusMetrics(metrics): Promise<void> {
+    await axios.post('http://localhost:8090/metrics/', metrics, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  async parsePrometheusString(counters: string) {
+    const lines = counters.split('\n');
+    const metrics: { [key: string]: number } = {};
+
+    for (const line of lines) {
+      if (line !== '' && !line.startsWith('#')) {
+        const [metricName, metricValueStr] = line.split(' ');
+        metrics[metricName] = parseFloat(metricValueStr);
+      }
+    }
+
+    return metrics;
   }
 }
